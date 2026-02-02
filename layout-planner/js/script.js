@@ -2940,8 +2940,8 @@ function compressMapWithName(entities, mapName, anchor = coordAnchor, _waveMode 
 
 
 function decompressMapWithName(combinedString) {
-    // Returns: { entities, mapName?, anchor?, waveMode?, cityLabelMode? }
-    const out = { entities: [], mapName: "", anchor: null, waveMode: null, cityLabelMode: null };
+    // Returns: { entities, mapName?, anchor?, waveMode?, cityLabelMode?, teams? }
+    const out = { entities: [], mapName: "", anchor: null, waveMode: null, cityLabelMode: null, teams: null };
 
     if (!combinedString || typeof combinedString !== 'string') {
         return out;
@@ -2966,6 +2966,13 @@ function decompressMapWithName(combinedString) {
             out.cityLabelMode = mode;
         } else if (seg.startsWith("mode=")) {
             out.mapMode = seg.slice(5).trim().toLowerCase();
+        } else if (seg.startsWith("teams=")) {
+            try {
+                const raw = decodeURIComponent(seg.slice(6));
+                out.teams = JSON.parse(raw);
+            } catch (e) {
+                console.warn('Failed to parse teams data from map code', e);
+            }
         } else {
             // Legacy support: if no prefix, treat as name
             if (!out.mapName) out.mapName = seg;
@@ -3013,10 +3020,31 @@ function loadMap() {
         });
 
         if (!Array.isArray(loaded)) {
-            setAnchorInput(loaded.anchor)
+            setAnchorInput(loaded.anchor);
             setWaveMode(loaded.waveMode);
             setCityLabelMode(loaded.cityLabelMode);
             setMapMode(loaded.mapMode || 'castle'); // 'base' as default if no mapmode was saved
+
+            // Restore teams if present; otherwise reset to defaults for legacy map codes
+            if (loaded.teams && typeof loaded.teams === 'object') {
+                const list = Array.isArray(loaded.teams.list) ? loaded.teams.list : [];
+                const assignments = (loaded.teams.assignments && typeof loaded.teams.assignments === 'object')
+                    ? loaded.teams.assignments
+                    : {};
+                customTeams = list.map(t => ({
+                    name: typeof t.name === 'string' ? t.name : 'Team',
+                    color: typeof t.color === 'string' ? t.color : '#3B82F6'
+                }));
+                if (customTeams.length === 0) {
+                    initializeDefaultTeams();
+                }
+                cityTeams = assignments;
+            } else {
+                customTeams = [];
+                initializeDefaultTeams();
+                cityTeams = {};
+            }
+            updateTeamsUI();
         }
 
         let cityId = 1;

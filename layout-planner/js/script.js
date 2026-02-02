@@ -1241,6 +1241,8 @@ function setMapMode(mode = 'base') {
     // Sync dropdown if present
     const sel = document.getElementById('mapModeSelect');
     if (sel) sel.value = mapMode;
+    const mobileSel = document.getElementById('mobileMapModeSelect');
+    if (mobileSel) mobileSel.value = mapMode;
 
     redraw();
     updateCityList();
@@ -1556,6 +1558,13 @@ window.addEventListener('DOMContentLoaded', () => {
         // set initial value
         mapModeSelect.value = mapMode;
         mapModeSelect.addEventListener('change', (e) => {
+            setMapMode(e.target.value);
+        });
+    }
+    const mobileMapModeSelect = document.getElementById('mobileMapModeSelect');
+    if (mobileMapModeSelect) {
+        mobileMapModeSelect.value = mapMode;
+        mobileMapModeSelect.addEventListener('change', (e) => {
             setMapMode(e.target.value);
         });
     }

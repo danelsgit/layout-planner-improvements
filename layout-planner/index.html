@@ -322,6 +322,16 @@
         <div id="mobileCities" class="mobile-panel">
             <div class="bg-white p-4">
                 <h3 class="font-medium mb-4">Cities</h3>
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <label for="mobileMapModeSelect" class="text-sm font-medium">Mode:</label>
+                    <select id="mobileMapModeSelect" class="p-2 border-2 border-gray-300 rounded-lg text-sm flex-1">
+                        <option value="castle">Castle</option>
+                        <option value="base">Base</option>
+                    </select>
+                </div>
+                <div id="mobileMarchtimeHint" class="mb-3 text-center text-xs text-gray-600 px-3 hidden">
+                    Note: In <strong>Castle</strong> mode march times are calculated using a 25% march speed bonus (no pets, with facilities).
+                </div>
                 <!-- Additional setttings -->
                 <div id="mobileCitySettingsButtons" class="flex justify-end gap-2 mb-3">
                     <!-- P1 = Clock toggle: toggles march times visibility on the canvas -->
@@ -483,17 +493,23 @@
 
             // Show the marchtime hint only when Castle mode is selected
             const mapModeSelect = document.getElementById('mapModeSelect');
+            const mobileMapModeSelect = document.getElementById('mobileMapModeSelect');
             const marchtimeHint = document.getElementById('marchtimeHint');
+            const mobileMarchtimeHint = document.getElementById('mobileMarchtimeHint');
             function updateMarchtimeHint() {
-                if (!mapModeSelect || !marchtimeHint) return;
-                if (mapModeSelect.value === 'castle') {
+                const mode = mapModeSelect?.value || mobileMapModeSelect?.value;
+                if (!mode) return;
+                if (mode === 'castle') {
                     marchtimeHint.classList.remove('hidden');
+                    mobileMarchtimeHint?.classList.remove('hidden');
                 } else {
                     marchtimeHint.classList.add('hidden');
+                    mobileMarchtimeHint?.classList.add('hidden');
                 }
             }
             updateMarchtimeHint();
             if (mapModeSelect) mapModeSelect.addEventListener('change', updateMarchtimeHint);
+            if (mobileMapModeSelect) mobileMapModeSelect.addEventListener('change', updateMarchtimeHint);
 
             // Event listeners declaratively
             document.querySelectorAll('[data-section]').forEach(btn => {

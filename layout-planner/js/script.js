@@ -1278,6 +1278,10 @@ function updateTeamControlsVisibility() {
     if (teamSection) {
         teamSection.classList.toggle('hidden', !showTeams);
     }
+    const mobileTeamActions = document.getElementById('mobileTeamActions');
+    if (mobileTeamActions) {
+        mobileTeamActions.classList.toggle('hidden', !showTeams);
+    }
     const current = document.getElementById('citySort')?.value || 'id';
     enablePopulateSortOptions(current);
 }
@@ -1592,6 +1596,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mobileShareButton')?.addEventListener('click', shareMap);
     document.getElementById('setAnchorBtn')?.addEventListener('click', handleSetAnchor);
     document.getElementById('createNewTeamBtn')?.addEventListener('click', createNewTeam);
+    document.getElementById('createNewTeamBtnMobile')?.addEventListener('click', createNewTeam);
     document.getElementById('saveAsCSVButton')?.addEventListener('click', () => exportPlayerNamesCSV({ onlyNamed: false }));
 
     // Team modal wiring

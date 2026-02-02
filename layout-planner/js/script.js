@@ -1406,13 +1406,30 @@ function updateTeamsUI() {
     customTeams.forEach((team, index) => {
         const teamEl = document.createElement('div');
         teamEl.className = 'flex items-center justify-between p-2 bg-gray-50 rounded mb-2';
-        teamEl.innerHTML = `
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 rounded" style="background-color: ${team.color}"></div>
-                <span class="text-sm font-medium">${team.name}</span>
-            </div>
-            <button onclick="deleteTeam(${index})" class="text-red-500 hover:text-red-700 text-xs">✕</button>
-        `;
+        const teamInfo = document.createElement('div');
+        teamInfo.className = 'flex items-center gap-2';
+
+        const colorBox = document.createElement('div');
+        colorBox.className = 'w-4 h-4 rounded';
+        const safeColor = typeof team.color === 'string' && /^#([0-9a-fA-F]{3}){1,2}$/.test(team.color)
+            ? team.color
+            : '#9ca3af';
+        colorBox.style.backgroundColor = safeColor;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'text-sm font-medium';
+        nameSpan.textContent = team.name || 'Team';
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'text-red-500 hover:text-red-700 text-xs';
+        deleteButton.textContent = '✕';
+        deleteButton.addEventListener('click', () => deleteTeam(index));
+
+        teamInfo.appendChild(colorBox);
+        teamInfo.appendChild(nameSpan);
+        teamEl.appendChild(teamInfo);
+        teamEl.appendChild(deleteButton);
         container.appendChild(teamEl);
     });
 }

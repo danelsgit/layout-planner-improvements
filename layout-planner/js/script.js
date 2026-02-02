@@ -2360,8 +2360,8 @@ function updateCityList() {
                     .toLowerCase()
                     .localeCompare((b.name || `City ${b.id}`).toLowerCase());
             case 'team': {
-                const teamA = cityTeams[a.id] !== undefined ? cityTeams[a.id] : 999;
-                const teamB = cityTeams[b.id] !== undefined ? cityTeams[b.id] : 999;
+                const teamA = cityTeams[a.id] !== undefined ? cityTeams[a.id] : Infinity;
+                const teamB = cityTeams[b.id] !== undefined ? cityTeams[b.id] : Infinity;
                 if (teamA === teamB) {
                     return (a.name || `City ${a.id}`)
                         .toLowerCase()

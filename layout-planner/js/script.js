@@ -42,6 +42,7 @@ let bearTraps = [];
 let enemyZones = []; // Array for enemy zones (max 3)
 let cityTeams = {}; // Store team assignments for cities: {cityId: teamIndex}
 let customTeams = []; // Dynamic array of teams: [{name: 'Team A', color: '#3B82F6'}, ...]
+let showTeamsInBase = false;
 
 // Initialize with default teams
 function initializeDefaultTeams() {
@@ -1273,7 +1274,7 @@ function updateEnemyZoneButtonVisibility() {
 }
 
 function updateTeamControlsVisibility() {
-    const showTeams = mapMode === 'castle';
+    const showTeams = mapMode === 'castle' || showTeamsInBase;
     const teamSection = document.getElementById('teamManagementSection');
     if (teamSection) {
         teamSection.classList.toggle('hidden', !showTeams);
@@ -1282,6 +1283,12 @@ function updateTeamControlsVisibility() {
     if (mobileTeamActions) {
         mobileTeamActions.classList.toggle('hidden', !showTeams);
     }
+    const showToggle = mapMode === 'base';
+    document.querySelectorAll('[citySettingsButtons="5"], [citySettingsButtons="m5"]').forEach(btn => {
+        btn.classList.toggle('hidden', !showToggle);
+        btn.classList.toggle('bg-yellow-500', showTeamsInBase);
+        btn.classList.toggle('text-white', showTeamsInBase);
+    });
     const current = document.getElementById('citySort')?.value || 'id';
     enablePopulateSortOptions(current);
 }
@@ -1788,6 +1795,13 @@ window.addEventListener('DOMContentLoaded', () => {
             // P4: Load CSV
             if (key.endsWith('4')) {
                 document.getElementById('playersCsvInput')?.click();
+            }
+            // P5: Show teams in base
+            if (key.endsWith('5')) {
+                if (mapMode !== 'base') return;
+                showTeamsInBase = !showTeamsInBase;
+                updateTeamControlsVisibility();
+                updateCityList();
             }
         });
     });
@@ -2495,7 +2509,7 @@ function updateCityList() {
         });
         li.appendChild(input);
 
-        if (mapMode === 'castle') {
+        if (mapMode === 'castle' || showTeamsInBase) {
             const teamSelect = document.createElement('select');
             teamSelect.className = 'text-xs border rounded px-2 py-1';
             teamSelect.style.minWidth = '80px';
@@ -3144,7 +3158,7 @@ function enablePopulateSortOptions(selected) {
         sel.innerHTML = '';
         sel.appendChild(new Option('ID', 'id'));
         sel.appendChild(new Option('Name', 'name'));
-        if (mapMode === 'castle') {
+        if (mapMode === 'castle' || showTeamsInBase) {
             sel.appendChild(new Option('Team', 'team'));
         }
     });

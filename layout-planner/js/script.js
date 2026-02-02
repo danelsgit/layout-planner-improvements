@@ -65,7 +65,7 @@ let territoryPreview = null;
 let cityLabelMode = defaultCityLabelMode;  // "march", "coords", "none"
 let waveMode = defaultWaveMode;
 let coordAnchor = { x: 600, y: 600 };
-let mapMode = 'castle'; // 'base' or 'castle' (add island?)
+let mapMode = 'base'; // 'base' or 'castle' (add island?)
 const castleReservedSize = 12; // Size of the reserved castle area
 const castleRedzoneThickness = 8; // Thickness of the redzone ring around the reserved area
 

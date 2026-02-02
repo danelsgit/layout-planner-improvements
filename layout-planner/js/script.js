@@ -2854,7 +2854,9 @@ function decompressNew(binaryString) {
         typeBits === "001" ? "city" :
         typeBits === "010" ? "building" :
         typeBits === "011" ? "node" :
-        typeBits === "101" ? "hq" : "obstacle";
+        typeBits === "101" ? "hq" :
+        typeBits === "110" ? "enemyzone" :
+        "obstacle";
 
         const storageX = parseInt(xBits, 2);
         const storageY = parseInt(yBits, 2);
@@ -2915,6 +2917,10 @@ function decompressNew(binaryString) {
         entity.width = 3;
         entity.height = 3;
         entity.color = "darkgreen";
+        } else if (type === "enemyzone") {
+        entity.width = 12;
+        entity.height = 12;
+        entity.color = "black";
         } else if (type === "obstacle") {
         entity.width = 1;
         entity.height = 1;
@@ -3025,11 +3031,14 @@ function loadMap() {
 
         entities.length = 0;
         bearTraps.length = 0;
+        enemyZones.length = 0;
 
         loadedEntities.forEach(entity => {
             entities.push(entity);
             if (entity.type === "building") {
                 bearTraps.push(entity);
+            } else if (entity.type === "enemyzone") {
+                enemyZones.push(entity);
             }
         });
 

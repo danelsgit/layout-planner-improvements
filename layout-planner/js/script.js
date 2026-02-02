@@ -1547,6 +1547,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('shareButton')?.addEventListener('click', shareMap);
     document.getElementById('mobileShareButton')?.addEventListener('click', shareMap);
     document.getElementById('setAnchorBtn')?.addEventListener('click', handleSetAnchor);
+    document.getElementById('createNewTeamBtn')?.addEventListener('click', createNewTeam);
     document.getElementById('saveAsCSVButton')?.addEventListener('click', () => exportPlayerNamesCSV({ onlyNamed: false }));
 
     // QOL - Set anchor on Enter key in input field

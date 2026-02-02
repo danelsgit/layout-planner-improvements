@@ -1227,6 +1227,9 @@ function setMapMode(mode = 'base') {
         }
     });
 
+    updateEnemyZoneButtonVisibility();
+    updateTeamControlsVisibility();
+
     // If entering castle mode, set the coord anchor to 599:599 and ensure entities
     if (mapMode === 'castle') {
         try { setAnchorInput({ x: 599, y: 599 }); } catch (e) { setCoordAnchor(599, 599); }
@@ -1240,6 +1243,41 @@ function setMapMode(mode = 'base') {
     if (sel) sel.value = mapMode;
 
     redraw();
+    updateCityList();
+}
+
+function updateEnemyZoneButtonVisibility() {
+    const show = mapMode === 'castle';
+    document.querySelectorAll('[data-type="enemyzone"]').forEach(button => {
+        button.classList.toggle('hidden', !show);
+        button.disabled = !show;
+        if (!show) {
+            button.setAttribute('aria-hidden', 'true');
+            button.setAttribute('tabindex', '-1');
+        } else {
+            button.removeAttribute('aria-hidden');
+            button.removeAttribute('tabindex');
+        }
+    });
+
+    if (!show && selectedType === 'enemyzone') {
+        const selectButton = document.querySelector('[data-type="select"]');
+        if (selectButton) {
+            selectButton.click();
+        } else {
+            selectedType = 'select';
+        }
+    }
+}
+
+function updateTeamControlsVisibility() {
+    const showTeams = mapMode === 'castle';
+    const teamSection = document.getElementById('teamManagementSection');
+    if (teamSection) {
+        teamSection.classList.toggle('hidden', !showTeams);
+    }
+    const current = document.getElementById('citySort')?.value || 'id';
+    enablePopulateSortOptions(current);
 }
 
 // Draw the reserved castle area around the anchor cell
@@ -2273,54 +2311,97 @@ function deleteSelectedEntity() {
 }
 
 function updateCityList() {
-    const cities = entities.filter(e => e.type === 'city');
-    const sortBy = document.getElementById('citySort')?.value || 'team';
+    // Get march times for all cities
+    entities.filter(e => e.type === 'city').forEach(city => {
+        city.marchTimes = calculateMarchTimes(city);
+    });
 
-    // Сортировка
-    if (sortBy === 'name') {
-        cities.sort((a, b) => {
-            const nameA = (a.name || `City ${a.id}`).toLowerCase();
-            const nameB = (b.name || `City ${b.id}`).toLowerCase();
-            return nameA.localeCompare(nameB);
-        });
-    } else if (sortBy === 'team') {
-        cities.sort((a, b) => {
-            const teamA = cityTeams[a.id] !== undefined ? cityTeams[a.id] : 999;
-            const teamB = cityTeams[b.id] !== undefined ? cityTeams[b.id] : 999;
+    const cityList = document.getElementById('cityList');
+    const mobileCityList = document.getElementById('mobileCityList');
+    const sortSelect = document.getElementById('citySort');
+    const mobileSortSelect = document.getElementById('mobileCitySort');
 
-            if (teamA === teamB) {
-                // Если одна команда - сортировать по имени
-                const nameA = (a.name || `City ${a.id}`).toLowerCase();
-                const nameB = (b.name || `City ${b.id}`).toLowerCase();
-                return nameA.localeCompare(nameB);
-            }
-            return teamA - teamB;
-        });
+    if (!cityList || !sortSelect || !mobileCityList || !mobileSortSelect) return;
+
+    // Sync sort options between desktop and mobile by cloning option nodes
+    while (mobileSortSelect.firstChild) mobileSortSelect.removeChild(mobileSortSelect.firstChild);
+    Array.from(sortSelect.options).forEach(opt => {
+        const newOpt = document.createElement('option');
+        newOpt.value = opt.value;
+        newOpt.textContent = opt.textContent;
+        mobileSortSelect.appendChild(newOpt);
+    });
+    mobileSortSelect.value = sortSelect.value;
+
+    let sortBy = sortSelect.value;
+    if (mapMode !== 'castle' && sortBy === 'team') {
+        sortBy = 'id';
     }
 
-    const updateList = (listId) => {
-        const list = document.getElementById(listId);
-        if (!list) return;
+    cityList.innerHTML = '';
+    mobileCityList.innerHTML = '';
 
-        list.innerHTML = '';
-        cities.forEach(city => {
-            const li = document.createElement('li');
-            li.className = 'flex items-center space-x-2 mb-2';
+    const cities = entities.filter(e => e.type === 'city');
+    const btIndex = sortBy === 'bt1' ? 0 : sortBy === 'bt2' ? 1 : null;
 
-            // City name input
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = city.name || `City ${city.id}`;
-            input.value = city.name || '';
-            input.className = 'border p-1 rounded touch-input';
-            input.style.width = '15ch';
-            input.addEventListener('input', () => {
-                city.name = input.value;
-                markUnsavedChanges();
-                redraw();
-            });
+    // Separate prioritized
+    const prioritized = btIndex !== null
+        ? cities.filter(c => c.priorities && c.priorities[`bt${btIndex + 1}`])
+        : [];
+    const others = btIndex !== null
+        ? cities.filter(c => !(c.priorities && c.priorities[`bt${btIndex + 1}`]))
+        : cities;
 
-            // Team selector dropdown
+    // Comparator for sorting
+    const comparator = (a, b) => {
+        switch (sortBy) {
+            case 'name':
+                return (a.name || `City ${a.id}`)
+                    .toLowerCase()
+                    .localeCompare((b.name || `City ${b.id}`).toLowerCase());
+            case 'team': {
+                const teamA = cityTeams[a.id] !== undefined ? cityTeams[a.id] : 999;
+                const teamB = cityTeams[b.id] !== undefined ? cityTeams[b.id] : 999;
+                if (teamA === teamB) {
+                    return (a.name || `City ${a.id}`)
+                        .toLowerCase()
+                        .localeCompare((b.name || `City ${b.id}`).toLowerCase());
+                }
+                return teamA - teamB;
+            }
+            case 'bt1':
+                return evaluateBTTime(a, 0) - evaluateBTTime(b, 0);
+            case 'bt2':
+                return evaluateBTTime(a, 1) - evaluateBTTime(b, 1);
+            case 'both':
+                return evaluateCombinedTime(a) - evaluateCombinedTime(b);
+            default:
+                return (a.id || 0) - (b.id || 0);
+        }
+    };
+
+    prioritized.sort(comparator);
+    others.sort(comparator);
+
+    const buildCityItem = (city) => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center space-x-2 mb-2';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = city.name || `City ${city.id}`;
+        input.placeholder = `City ${city.id}`;
+        input.className = 'border p-1 rounded touch-input';
+        input.style.width = '15ch';
+        input.addEventListener('change', () => {
+            city.name = input.value;
+            redraw();
+            markUnsavedChanges();
+            updateCityList();
+        });
+        li.appendChild(input);
+
+        if (mapMode === 'castle') {
             const teamSelect = document.createElement('select');
             teamSelect.className = 'text-xs border rounded px-2 py-1';
             teamSelect.style.minWidth = '80px';
@@ -2344,38 +2425,59 @@ function updateCityList() {
                 assignCityToTeam(city, teamIndex);
             });
 
-            // March time bubble
-            let marchTimeText = '';
-            if (cityLabelMode === 'march') {
-                const marchTimes = calculateMarchTimes(city);
-                if (mapMode === 'castle') {
-                    if (marchTimes.length > 0) {
-                        marchTimeText = `Castle: ${marchTimes[0]}s`;
-                    }
-                } else {
-                    // base mode - show bear trap times
-                    if (marchTimes.length > 0) {
-                        marchTimeText = marchTimes.map((t, i) => `BT${i+1}: ${t}s`).join(', ');
+            li.appendChild(teamSelect);
+        }
+
+        city.marchTimes.forEach((time, i) => {
+            const key = `bt${i + 1}`;
+            const isPriority = city.priorities && city.priorities[key];
+            const bubble = document.createElement('span');
+            const labelPrefix = mapMode === 'castle' ? 'Castle' : `BT${i + 1}`;
+            bubble.textContent = `${labelPrefix}: ${time}s`;
+            bubble.className = `bt-bubble inline-flex items-center justify-center px-2 py-1 text-xs leading-none rounded cursor-pointer min-w-[70px] ${
+                isPriority ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'
+            }`;
+            bubble.addEventListener('click', () => {
+                city.priorities = city.priorities || {};
+                city.priorities[key] = !city.priorities[key];
+                if (city.priorities[key]) {
+                    const candidates = entities.filter(e =>
+                        e.type === 'city' &&
+                        !(e.priorities && e.priorities[key])
+                    );
+                    if (candidates.length) {
+                        let bestCity = candidates[0];
+                        let bestTime = sortBy === 'both'
+                            ? evaluateCombinedTime(bestCity)
+                            : evaluateBTTime(bestCity, i);
+                        candidates.forEach(c => {
+                            const t = sortBy === 'both'
+                                ? evaluateCombinedTime(c)
+                                : evaluateBTTime(c, i);
+                            if (t < bestTime) {
+                                bestTime = t;
+                                bestCity = c;
+                            }
+                        });
+                        [city.x, bestCity.x] = [bestCity.x, city.x];
+                        [city.y, bestCity.y] = [bestCity.y, city.y];
                     }
                 }
-            }
-
-            li.appendChild(input);
-            li.appendChild(teamSelect);
-
-            if (marchTimeText) {
-                const bubble = document.createElement('span');
-                bubble.className = 'bt-bubble inline-flex items-center justify-center px-2 py-1 text-xs leading-none rounded cursor-pointer min-w-[70px] bg-gray-200 text-gray-700';
-                bubble.textContent = marchTimeText;
-                li.appendChild(bubble);
-            }
-
-            list.appendChild(li);
+                redraw();
+                updateCityList();
+                markUnsavedChanges();
+            });
+            li.appendChild(bubble);
         });
+
+        return li;
     };
 
-    updateList('cityList');
-    updateList('mobileCityList');
+    // Render prioritized cities first, then others for both lists
+    [...prioritized, ...others].forEach(city => {
+        cityList.appendChild(buildCityItem(city));
+        mobileCityList.appendChild(buildCityItem(city));
+    });
 }
 
 function renumberCities() {
@@ -2912,28 +3014,36 @@ function updatePageTitle() {
 // Populate sort selector dynamically
 function enablePopulateSortOptions(selected) {
     const sortSelect = document.getElementById('citySort');
-    if (!sortSelect) return;
-    sortSelect.innerHTML = '';
-    
-   
-    sortSelect.appendChild(new Option('Team', 'team'));
-    sortSelect.appendChild(new Option('Name', 'name'));
+    const mobileSort = document.getElementById('mobileCitySort');
+    const selects = [sortSelect, mobileSort].filter(Boolean);
+    if (!selects.length) return;
+
+    selects.forEach(sel => {
+        sel.innerHTML = '';
+        sel.appendChild(new Option('ID', 'id'));
+        sel.appendChild(new Option('Name', 'name'));
+        if (mapMode === 'castle') {
+            sel.appendChild(new Option('Team', 'team'));
+        }
+    });
     
     // Check presence of BT1/BT2
     const cities = entities.filter(e => e.type === 'city');
     const anyBT1 = cities.some(c => calculateMarchTimes(c).length >= 1);
     const anyBT2 = cities.some(c => calculateMarchTimes(c).length >= 2);
     
-    if (anyBT1) sortSelect.appendChild(new Option('BT1-Time', 'bt1'));
-    if (anyBT2) sortSelect.appendChild(new Option('BT2-Time', 'bt2'));
-    if (anyBT1 && anyBT2) sortSelect.appendChild(new Option('Combined BT1+BT2', 'both'));
-    
-    if (selected && Array.from(sortSelect.options).some(o => o.value === selected)) {
-        sortSelect.value = selected;
-    } else {
-        sortSelect.value = 'name'; 
-    }
-    sortSelect.onchange = updateCityList;
+    selects.forEach(sel => {
+        if (anyBT1) sel.appendChild(new Option('BT1-Time', 'bt1'));
+        if (anyBT2) sel.appendChild(new Option('BT2-Time', 'bt2'));
+        if (anyBT1 && anyBT2) sel.appendChild(new Option('Combined BT1+BT2', 'both'));
+
+        if (selected && Array.from(sel.options).some(o => o.value === selected)) {
+            sel.value = selected;
+        } else {
+            sel.value = 'id';
+        }
+        sel.onchange = updateCityList;
+    });
 }
 
 // Helper function to evaluate BT time for a city

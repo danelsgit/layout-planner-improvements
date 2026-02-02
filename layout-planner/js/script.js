@@ -1392,16 +1392,51 @@ setAnchorInput(coordAnchor);
 
 // ========== TEAM MANAGEMENT FUNCTIONS ==========
 
-function createNewTeam() {
-    const name = prompt('Enter team name:', `Team ${customTeams.length + 1}`);
-    if (!name) return;
+function openTeamModal() {
+    const modal = document.getElementById('teamModal');
+    const nameInput = document.getElementById('teamNameInput');
+    const colorInput = document.getElementById('teamColorInput');
+    const hexInput = document.getElementById('teamColorHex');
+    if (!modal || !nameInput || !colorInput || !hexInput) return;
 
-    const color = prompt('Enter color (hex code):', '#3B82F6');
-    if (!color) return;
+    const defaultName = `Team ${customTeams.length + 1}`;
+    const defaultColor = '#3B82F6';
+    nameInput.value = defaultName;
+    colorInput.value = defaultColor;
+    hexInput.value = defaultColor;
 
-    customTeams.push({name: name, color: color});
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setTimeout(() => nameInput.focus(), 0);
+}
+
+function closeTeamModal() {
+    const modal = document.getElementById('teamModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function saveTeamFromModal() {
+    const nameInput = document.getElementById('teamNameInput');
+    const colorInput = document.getElementById('teamColorInput');
+    const hexInput = document.getElementById('teamColorHex');
+    if (!nameInput || !colorInput || !hexInput) return;
+
+    const name = (nameInput.value || '').trim() || `Team ${customTeams.length + 1}`;
+    let color = (hexInput.value || '').trim();
+    if (!/^#([0-9a-fA-F]{3}){1,2}$/.test(color)) {
+        color = colorInput.value || '#3B82F6';
+    }
+
+    customTeams.push({ name, color });
     updateTeamsUI();
     markUnsavedChanges();
+    closeTeamModal();
+}
+
+function createNewTeam() {
+    openTeamModal();
 }
 
 function deleteTeam(index) {
@@ -1549,6 +1584,50 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('setAnchorBtn')?.addEventListener('click', handleSetAnchor);
     document.getElementById('createNewTeamBtn')?.addEventListener('click', createNewTeam);
     document.getElementById('saveAsCSVButton')?.addEventListener('click', () => exportPlayerNamesCSV({ onlyNamed: false }));
+
+    // Team modal wiring
+    const teamModal = document.getElementById('teamModal');
+    const teamModalClose = document.getElementById('teamModalClose');
+    const teamModalCancel = document.getElementById('teamModalCancel');
+    const teamModalSave = document.getElementById('teamModalSave');
+    const teamNameInput = document.getElementById('teamNameInput');
+    const teamColorInput = document.getElementById('teamColorInput');
+    const teamColorHex = document.getElementById('teamColorHex');
+
+    teamModalClose?.addEventListener('click', closeTeamModal);
+    teamModalCancel?.addEventListener('click', closeTeamModal);
+    teamModalSave?.addEventListener('click', saveTeamFromModal);
+    teamModal?.addEventListener('click', (e) => {
+        if (e.target === teamModal) closeTeamModal();
+    });
+
+    teamColorInput?.addEventListener('input', () => {
+        if (teamColorHex) teamColorHex.value = teamColorInput.value;
+    });
+    teamColorHex?.addEventListener('input', () => {
+        const val = teamColorHex.value.trim();
+        if (/^#([0-9a-fA-F]{3}){1,2}$/.test(val) && teamColorInput) {
+            teamColorInput.value = val;
+        }
+    });
+    teamNameInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTeamFromModal();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeTeamModal();
+        }
+    });
+    teamColorHex?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTeamFromModal();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeTeamModal();
+        }
+    });
 
     // QOL - Set anchor on Enter key in input field
     document.getElementById('anchorInput')?.addEventListener('keydown', (e) => {
